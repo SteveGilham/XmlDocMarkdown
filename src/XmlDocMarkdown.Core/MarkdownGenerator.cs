@@ -772,14 +772,36 @@ namespace XmlDocMarkdown.Core
 
 		private static string GetMemberNamespaceName(MemberInfo memberInfo) => GetNamespaceName(memberInfo as TypeInfo ?? memberInfo.DeclaringType.GetTypeInfo());
 
+		private readonly static Regex tickdot =
+			new Regex(@"\`\d+\.", RegexOptions.Compiled);
+
+		private readonly static Regex dotstatic =
+			new Regex(@"\..*\.Static$", RegexOptions.Compiled);
+
 		private static string GetShortName(MemberInfo memberInfo)
 		{
 			string name = memberInfo.Name;
 
 			int tickIndex = name.IndexOf('`');
-			if (tickIndex >= name.IndexOf('.') &&
-				tickIndex >= 0) // heuristic
-				name = name.Substring(0, tickIndex);
+			if (tickIndex != -1)
+			{
+				// heuristic for F# extension methods on generic types
+				name = tickdot.Replace(name, ".");
+				tickIndex = name.IndexOf('`');
+				if (tickIndex != -1)
+					name = name.Substring(0, tickIndex);
+			}
+
+			if (memberInfo is MethodInfo)
+			{
+				// heuristic for F# static extension methods
+				var methodInfo = memberInfo as MethodInfo;
+				if (methodInfo.IsStatic &&
+					dotstatic.IsMatch(name))
+				{
+					name = name.Substring(0, name.LastIndexOf('.'));
+				}
+			}
 
 			if (name == ".ctor" || name == ".cctor")
 				name = GetShortName(memberInfo.DeclaringType.GetTypeInfo());
