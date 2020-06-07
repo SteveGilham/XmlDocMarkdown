@@ -369,14 +369,8 @@ namespace XmlDocMarkdown.Core
 					))
 			{
 				var methodInfo = memberInfo as MethodInfo;
-				if (methodInfo.GetParameters()
-					.Select(p => p.ParameterType.Name + ".")
-					.Take(1)
-					.All(n => methodInfo.Name.StartsWith(n, StringComparison.Ordinal)))
-				{
-					xmlDocRef = XmlDocUtility.GetXmlDocRefUnhash(methodInfo);
-					xmlDocMember = doc.FindMember(xmlDocRef);
-				}
+				xmlDocRef = XmlDocUtility.GetXmlDocRefUnhash(methodInfo);
+				xmlDocMember = doc.FindMember(xmlDocRef);
 			}
 
 			return xmlDocMember;
