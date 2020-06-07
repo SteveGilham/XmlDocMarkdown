@@ -777,7 +777,8 @@ namespace XmlDocMarkdown.Core
 			string name = memberInfo.Name;
 
 			int tickIndex = name.IndexOf('`');
-			if (tickIndex != -1)
+			if (tickIndex >= name.IndexOf('.') &&
+				tickIndex >= 0) // heuristic
 				name = name.Substring(0, tickIndex);
 
 			if (name == ".ctor" || name == ".cctor")
