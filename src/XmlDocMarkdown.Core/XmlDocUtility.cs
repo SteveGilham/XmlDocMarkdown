@@ -48,6 +48,18 @@ namespace XmlDocMarkdown.Core
 			throw new InvalidOperationException("Unexpected member: " + memberInfo);
 		}
 
+		// For F# extension methods, get the name wuth no `#` marks added
+		public static string GetXmlDocRefUnhash(MethodInfo methodInfo)
+		{
+			return "M:" +
+				GetXmlDocTypePart(methodInfo.DeclaringType.GetTypeInfo()) +
+				"." +
+				methodInfo.Name +
+				(methodInfo.IsGenericMethodDefinition ? $"``{methodInfo.GetGenericArguments().Length}" : "") +
+				GetXmlDocParameters(methodInfo.GetParameters()) +
+				(methodInfo?.Name == "op_Implicit" || methodInfo?.Name == "op_Explicit" ? $"~{GetXmlDocTypePart(methodInfo.ReturnType.GetTypeInfo())}" : "");
+		}
+
 		public static string GetShortNameForXmlDocRef(string xmlDocRef)
 		{
 			var match = Regex.Match(xmlDocRef, @"^[A-Z]:([^\.]+\.)*(?'name'[^\.\(\{`]+)", RegexOptions.CultureInvariant | RegexOptions.ExplicitCapture);

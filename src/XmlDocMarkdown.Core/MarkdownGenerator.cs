@@ -249,7 +249,7 @@ namespace XmlDocMarkdown.Core
 		}
 
 		private static Collection<XmlDocBlock> GetSummary(XmlDocAssembly xmlDocAssembly, MemberInfo member)
-			=> GetSummary(xmlDocAssembly.FindMember(XmlDocUtility.GetXmlDocRef(member)), member);
+			=> GetSummary(FindMember(xmlDocAssembly, member, out _), member);
 
 		private static Collection<XmlDocBlock> GetSummary(XmlDocMember xmlDocMember, MemberInfo member)
 		{
@@ -353,6 +353,35 @@ namespace XmlDocMarkdown.Core
 			return path.Replace("\\", "/");
 		}
 
+		private static XmlDocMember FindMember(XmlDocAssembly doc, MemberInfo memberInfo, out string xmlDocRef)
+		{
+			xmlDocRef = XmlDocUtility.GetXmlDocRef(memberInfo);
+			var xmlDocMember = doc.FindMember(xmlDocRef);
+
+			// F# extension method special case
+			// If the declaring type is made in F#,
+			// and the name begins with the first argument type name,
+			// then try again with the raw member name with any `.` left untouched
+			if (xmlDocMember == null &&
+				memberInfo is MethodInfo &&
+				memberInfo.DeclaringType.CustomAttributes.Any(
+					a => a.AttributeType.FullName == "Microsoft.FSharp.Core.CompilationMappingAttribute"
+					))
+			{
+				var methodInfo = memberInfo as MethodInfo;
+				if (methodInfo.GetParameters()
+					.Select(p => p.ParameterType.Name + ".")
+					.Take(1)
+					.All(n => methodInfo.Name.StartsWith(n, StringComparison.Ordinal)))
+				{
+					xmlDocRef = XmlDocUtility.GetXmlDocRefUnhash(methodInfo);
+					xmlDocMember = doc.FindMember(xmlDocRef);
+				}
+			}
+
+			return xmlDocMember;
+		}
+
 		private NamedText WriteMemberPage(string path, string parent, string title, IReadOnlyList<MemberInfo> memberGroup, MarkdownContext context)
 		{
 			string extension = GetFileExtension();
@@ -378,8 +407,7 @@ namespace XmlDocMarkdown.Core
 
 					writer.WriteLine($"# {EscapeHtml(GetMemberHeading(memberGroup, memberIndex))}");
 
-					var xmlDocRef = XmlDocUtility.GetXmlDocRef(memberInfo);
-					var xmlDocMember = memberContext.XmlDocAssembly.FindMember(xmlDocRef);
+					var xmlDocMember = FindMember(memberContext.XmlDocAssembly, memberInfo, out string xmlDocRef);
 
 					var summary = GetSummary(xmlDocMember, memberInfo);
 					if (summary != null && summary.Count != 0)
